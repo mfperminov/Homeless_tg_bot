@@ -661,21 +661,6 @@ class UserState {
         this.templateRowForEditing = new ArrayList<>(); // Initialize to empty
     }
 
-    // Constructor for editing states
-    public UserState(State state,
-                     String sheetNameForEditing,
-                     List<Object> headerRowForEditing,
-                     List<Object> templateRowForEditing) {
-        this.state = state;
-        this.sheetNameForEditing = sheetNameForEditing;
-        this.headerRowForEditing = headerRowForEditing != null ? new ArrayList<>(headerRowForEditing) : new ArrayList<>();
-        this.templateRowForEditing = templateRowForEditing != null
-                ? new ArrayList<>(templateRowForEditing)
-                : new ArrayList<>(); // Ensure mutable copy
-        this.pendingEdits = new HashMap<>();
-        this.availableSheets = new ArrayList<>();
-    }
-
 
     public State getState() {
         return state;
