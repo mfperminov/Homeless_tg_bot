@@ -640,7 +640,6 @@ class UserState {
         SELECTING_SHEET, // User has typed /sheets, bot is waiting for a sheet name selection
         AWAITING_COLUMN_TO_EDIT, // User wants to add/edit a row, bot is waiting for column selection
         AWAITING_NEW_VALUE_FOR_EDIT, // User has selected a column, bot is waiting for the new value
-        REVIEWING_PENDING_ROW // User has provided a value, bot shows current new row & asks to continue or done
     }
 
     private State state;
