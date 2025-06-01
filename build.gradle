@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+group = 'ru.mperminov'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Telegram Bot API
+    implementation 'org.telegram:telegrambots-longpolling:8.3.0'
+    implementation 'org.telegram:telegrambots-client:8.3.0'
+
+    // Google Sheets API
+    implementation 'com.google.api-client:google-api-client:2.7.2'
+    implementation 'com.google.oauth-client:google-oauth-client-jetty:1.34.1'
+    implementation 'com.google.apis:google-api-services-sheets:v4-rev20230227-2.0.0'
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    // SLF4J and Logback
+    implementation 'org.slf4j:slf4j-api:2.0.12'
+    implementation 'ch.qos.logback:logback-classic:1.5.13'
+    implementation 'ch.qos.logback:logback-core:1.5.13'
+}
+
+test {
+    useJUnitPlatform()
+}
