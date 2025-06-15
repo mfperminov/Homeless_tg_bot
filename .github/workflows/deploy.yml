@@ -51,13 +51,11 @@ jobs:
           name: homeless-bot-jar
           path: ./artifact
 
-      - name: List downloaded artifacts
+      - name: Rename artifact for deployment
         run: |
+          mv ./artifact/*-all.jar ./artifact/app.jar
+          echo "Renamed JAR to app.jar. Contents of artifact directory:"
           ls -la ./artifact/
-          echo "Checking JAR contents:"
-          jar tf ./artifact/*.jar
-          echo "Showing manifest:"
-          unzip -p ./artifact/*.jar META-INF/MANIFEST.MF
 
       - name: Copy JAR to VPS
         uses: appleboy/scp-action@master
@@ -65,10 +63,8 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          source: "./artifact/*.jar"
+          source: "./artifact/app.jar"
           target: "/tmp/"
-          rename: "app.jar"
-          strip_components: 1
 
       - name: Run deploy script on VPS
         uses: appleboy/ssh-action@master
