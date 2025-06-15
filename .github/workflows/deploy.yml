@@ -131,6 +131,7 @@ jobs:
             echo "Enabling and restarting service..."
             sudo systemctl enable ${{ env.SERVICE_NAME }}
             sudo systemctl restart ${{ env.SERVICE_NAME }}
+            
             echo "Checking service status..."
             sudo systemctl status ${{ env.SERVICE_NAME }}
             
