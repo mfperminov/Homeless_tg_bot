@@ -37,118 +37,114 @@ jobs:
           path: build/libs/*-all.jar
 
   deploy:
-    needs: build
     runs-on: ubuntu-latest
-    env:
-      APP_DIR: "/opt/homeless-bot"
-      SERVICE_NAME: "homeless-bot"
-      JAR_NAME: "app.jar"
-
+    needs: build
+    
     steps:
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
           name: homeless-bot-jar
-          path: ./artifact
+          path: ./
 
-      - name: Rename artifact for deployment
-        run: |
-          mv ./artifact/*-all.jar ./artifact/app.jar
-          echo "Renamed JAR to app.jar. Contents of artifact directory:"
-          ls -la ./artifact/
+      - name: Rename Artifact
+        run: mv ./*-all.jar app.jar
 
-      - name: Copy JAR to VPS
-        uses: appleboy/scp-action@master
+      - name: Copy artifact to server via rsync
+        uses: easingthemes/ssh-deploy@v5.0.0
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          source: "./artifact/app.jar"
-          target: "/tmp/"
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.VPS_HOST }}
+          REMOTE_USER: ${{ secrets.VPS_USER }}
+          SOURCE: "app.jar"
+          TARGET: "/tmp"
 
-      - name: Run deploy script on VPS
+      - name: Install and restart service on server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          script_stop: true
           script: |
-            set -e
+            set -euo pipefail
             
-            JAR_FILE_TMP="/tmp/app.jar"
+            # --- Variables ---
+            APP_DIR="/opt/homeless-bot"
+            JAR_NAME="app.jar"
+            SERVICE_NAME="homeless-bot"
+            VPS_USER=${{ secrets.VPS_USER }}
+
+            JAR_FILE_TMP="/tmp/$JAR_NAME"
+            JAR_FILE_DEST="$APP_DIR/$JAR_NAME"
+            RESOURCES_DIR="$APP_DIR/src/main/resources"
+            ENV_FILE_PATH="$APP_DIR/src/app.env"
+            CREDENTIALS_FILE_PATH="$RESOURCES_DIR/credentials.json"
+            SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
             
-            echo "Verifying temporary JAR file..."
+            echo "--- Starting Deployment on Server ---"
+
+            echo "1. Verifying temporary JAR file..."
             if [ ! -f "$JAR_FILE_TMP" ]; then
-              echo "Error: JAR file not found in /tmp after scp."
+              echo "   ERROR: JAR file not found at $JAR_FILE_TMP after copy. Deployment failed."
               exit 1
             fi
+            echo "   Temporary JAR file found. Details:"
             ls -la "$JAR_FILE_TMP"
 
-            echo "Creating application directory..."
-            sudo mkdir -p ${{ env.APP_DIR }}/src/main/resources
+            echo "2. Stopping existing service..."
+            sudo systemctl stop "$SERVICE_NAME" || echo "   Service was not running, which is fine."
+
+            echo "3. Preparing application directories..."
+            sudo mkdir -p "$RESOURCES_DIR"
             
-            echo "Moving JAR file to final location..."
-            sudo mv "$JAR_FILE_TMP" ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            echo "4. Deploying new JAR file..."
+            sudo mv "$JAR_FILE_TMP" "$JAR_FILE_DEST"
+            echo "   JAR moved to $JAR_FILE_DEST."
             
-            echo "Verifying final JAR file..."
-            if [ ! -f "${{ env.APP_DIR }}/${{ env.JAR_NAME }}" ]; then
-              echo "Error: JAR file does not exist at ${{ env.APP_DIR }}/${{ env.JAR_NAME }}"
-              exit 1
-            fi
+            echo "5. Writing configuration files..."
+            echo "   Writing environment file..."
+            sudo tee "$ENV_FILE_PATH" > /dev/null << EOF
+            tg.bot.token=${{ secrets.TG_BOT_TOKEN }}
+            spreadsheet.id=${{ secrets.SPREADSHEET_ID }}
+            EOF
             
-            if [ ! -s "${{ env.APP_DIR }}/${{ env.JAR_NAME }}" ]; then
-              echo "Error: JAR file is empty"
-              exit 1
-            fi
-            
-            echo "JAR file details:"
-            ls -la ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
-            file ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
-            
-            echo "Checking JAR contents on server:"
-            jar tf ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
-            echo "Showing manifest on server:"
-            unzip -p ${{ env.APP_DIR }}/${{ env.JAR_NAME }} META-INF/MANIFEST.MF
-            
-            echo "Creating environment files..."
-            sudo mkdir -p ${{ env.APP_DIR }}/src
-            echo "tg.bot.token=${{ secrets.TG_BOT_TOKEN }}" | sudo tee ${{ env.APP_DIR }}/src/app.env > /dev/null
-            echo "spreadsheet.id=${{ secrets.SPREADSHEET_ID }}" | sudo tee -a ${{ env.APP_DIR }}/src/app.env > /dev/null
-            
-            echo "Creating credentials file..."
-            echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' | sudo tee ${{ env.APP_DIR }}/src/main/resources/credentials.json > /dev/null
-            
-            echo "Setting up systemd service..."
-            echo '[Unit]
+            echo "   Writing credentials file..."
+            echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' | sudo tee "$CREDENTIALS_FILE_PATH" > /dev/null
+
+            echo "6. Creating systemd service file..."
+            sudo tee "$SERVICE_FILE" > /dev/null << EOF
+            [Unit]
             Description=Homeless Bot Service
             After=network.target
             
             [Service]
-            User=${{ secrets.VPS_USER }}
-            Group=${{ secrets.VPS_USER }}
-            WorkingDirectory=${{ env.APP_DIR }}
-            ExecStart=/usr/bin/java -jar ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            User=$VPS_USER
+            Group=$VPS_USER
+            WorkingDirectory=$APP_DIR
+            ExecStart=/usr/bin/java -jar $JAR_FILE_DEST
             SuccessExitStatus=143
             Restart=always
-            RestartSec=5s
-            StandardOutput=journal
-            StandardError=journal
-            SyslogIdentifier=${{ env.SERVICE_NAME }}
+            RestartSec=10s
             
             [Install]
-            WantedBy=multi-user.target' | sudo tee /etc/systemd/system/${{ env.SERVICE_NAME }}.service > /dev/null
+            WantedBy=multi-user.target
+            EOF
+            echo "   Service file written to $SERVICE_FILE."
             
-            echo "Setting permissions..."
-            sudo chown -R ${{ secrets.VPS_USER }}:${{ secrets.VPS_USER }} ${{ env.APP_DIR }}
+            echo "7. Setting file ownership and permissions..."
+            sudo chown -R "$VPS_USER":"$VPS_USER" "$APP_DIR"
+            sudo chmod 755 "$JAR_FILE_DEST"
+            echo "   Permissions set."
             
-            echo "Reloading systemd..."
+            echo "8. Reloading systemd and restarting service..."
             sudo systemctl daemon-reload
+            sudo systemctl enable "$SERVICE_NAME"
+            sudo systemctl restart "$SERVICE_NAME"
+            echo "   Service enabled and restarted."
             
-            echo "Enabling and restarting service..."
-            sudo systemctl enable ${{ env.SERVICE_NAME }}
-            sudo systemctl restart ${{ env.SERVICE_NAME }}
+            echo "9. Checking final service status..."
+            sleep 5 
+            sudo systemctl status "$SERVICE_NAME" --no-pager
             
-            echo "Checking service status..."
-            sudo systemctl status ${{ env.SERVICE_NAME }}
-            
-            echo "Deployment complete. To check logs, use: journalctl -u ${{ env.SERVICE_NAME }} -f"
+            echo "--- Deployment Complete ---"
