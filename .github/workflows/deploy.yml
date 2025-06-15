@@ -57,7 +57,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           source: "./artifact/*.jar"
-          target: "/tmp/app.jar"
+          target: "/tmp"
+          strip_components: 0
 
       - name: Run deploy script on VPS
         uses: appleboy/ssh-action@master
@@ -72,12 +73,20 @@ jobs:
             sudo mkdir -p ${{ env.APP_DIR }}/src/main/resources
             
             echo "Moving JAR file to final location..."
+            # Find the JAR file in /tmp
+            JAR_FILE=$(find /tmp -name "*.jar" -type f -print -quit)
+            if [ -z "$JAR_FILE" ]; then
+              echo "Error: No JAR file found in /tmp"
+              exit 1
+            fi
+            
+            echo "Found JAR file: $JAR_FILE"
             
             # Remove existing file/directory if it exists
             sudo rm -rf ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
             
             # Copy the JAR file
-            sudo cp /tmp/app.jar ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            sudo cp "$JAR_FILE" ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
             
             # Set proper permissions
             sudo chown ${{ secrets.VPS_USER }}:${{ secrets.VPS_USER }} ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
