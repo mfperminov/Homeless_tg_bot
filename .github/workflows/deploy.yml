@@ -32,9 +32,8 @@ jobs:
       APP_DIR: "/opt/homeless-bot"
       SERVICE_NAME: "homeless-bot"
       JAR_NAME: "app.jar"
-
     steps:
-      - name: Download JAR artifact on runner
+      - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
           name: homeless-bot-jar
@@ -47,9 +46,9 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           source: "./artifact/*.jar"
-          target: "${{ env.APP_DIR }}/$ { { env.JAR_NAME }}"  # Note: no spaces, make sure no stray spaces here
+          target: "${{ env.APP_DIR }}/${{ env.JAR_NAME }}"
 
-      - name: Deploy and restart service on VPS
+      - name: Run deploy script on VPS
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -58,18 +57,16 @@ jobs:
           script: |
             set -e
 
-            echo "Creating application directory ${{ env.APP_DIR }}"
             sudo mkdir -p ${{ env.APP_DIR }}/src/main/resources
 
-            echo "Creating app.env file..."
+            # Create environment files
             sudo mkdir -p ${{ env.APP_DIR }}/src
             echo "tg.bot.token=${{ secrets.TG_BOT_TOKEN }}" | sudo tee ${{ env.APP_DIR }}/src/app.env > /dev/null
             echo "spreadsheet.id=${{ secrets.SPREADSHEET_ID }}" | sudo tee -a ${{ env.APP_DIR }}/src/app.env > /dev/null
 
-            echo "Creating credentials.json file..."
             echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' | sudo tee ${{ env.APP_DIR }}/src/main/resources/credentials.json > /dev/null
 
-            echo "Creating systemd service file /etc/systemd/system/${{ env.SERVICE_NAME }}.service"
+            # Setup systemd service file
             sudo tee /etc/systemd/system/${{ env.SERVICE_NAME }}.service > /dev/null <<EOF
             [Unit]
             Description=Homeless Bot Service
@@ -91,11 +88,8 @@ jobs:
             WantedBy=multi-user.target
             EOF
 
-            echo "Reloading systemd daemon..."
             sudo systemctl daemon-reload
+            sudo systemctl enable ${{ env.SERVICE_NAME }}
+            sudo systemctl restart ${{ env.SERVICE_NAME }}
 
-            echo "Enabling and restarting ${{ env.SERVICE_NAME }} service..."
-            sudo systemctl enable ${{ env.SERVICE_NAME }}.service
-            sudo systemctl restart ${{ env.SERVICE_NAME }}.service
-
-            echo "Deployment complete. Logs: journalctl -u ${{ env.SERVICE_NAME }} -f"
+            echo "Deployment complete. Check logs: journalctl -u ${{ env.SERVICE_NAME }} -f"
