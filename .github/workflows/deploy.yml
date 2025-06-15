@@ -59,6 +59,16 @@ jobs:
           source: "./artifact/*.jar"
           target: "/tmp/app.jar"
 
+      - name: Configure sudo access
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          script: |
+            echo "${{ secrets.VPS_USER }} ALL=(ALL) NOPASSWD: /usr/bin/mkdir, /usr/bin/mv, /usr/bin/chown, /usr/bin/chmod, /usr/bin/tee, /usr/bin/systemctl" | sudo tee /etc/sudoers.d/${{ secrets.VPS_USER }}
+            sudo chmod 440 /etc/sudoers.d/${{ secrets.VPS_USER }}
+
       - name: Run deploy script on VPS
         uses: appleboy/ssh-action@master
         with:
@@ -93,8 +103,7 @@ jobs:
             echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' | sudo tee ${{ env.APP_DIR }}/src/main/resources/credentials.json > /dev/null
             
             echo "Setting up systemd service..."
-            sudo tee /etc/systemd/system/${{ env.SERVICE_NAME }}.service > /dev/null <<EOF
-            [Unit]
+            echo '[Unit]
             Description=Homeless Bot Service
             After=network.target
             
@@ -111,8 +120,7 @@ jobs:
             SyslogIdentifier=${{ env.SERVICE_NAME }}
             
             [Install]
-            WantedBy=multi-user.target
-            EOF
+            WantedBy=multi-user.target' | sudo tee /etc/systemd/system/${{ env.SERVICE_NAME }}.service > /dev/null
             
             echo "Setting permissions..."
             sudo chown -R ${{ secrets.VPS_USER }}:${{ secrets.VPS_USER }} ${{ env.APP_DIR }}
@@ -123,7 +131,6 @@ jobs:
             echo "Enabling and restarting service..."
             sudo systemctl enable ${{ env.SERVICE_NAME }}
             sudo systemctl restart ${{ env.SERVICE_NAME }}
-            
             echo "Checking service status..."
             sudo systemctl status ${{ env.SERVICE_NAME }}
             
