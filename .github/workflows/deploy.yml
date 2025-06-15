@@ -25,8 +25,11 @@ jobs:
           echo "Listing JAR contents:"
           jar tf build/libs/*.jar
           echo "Showing manifest:"
-          jar tf build/libs/*.jar | grep META-INF/MANIFEST.MF
           unzip -p build/libs/*.jar META-INF/MANIFEST.MF
+          echo "Verifying JAR structure:"
+          ls -la build/libs/
+          echo "Checking if JAR is executable:"
+          java -jar build/libs/*.jar --version || true
 
       - name: List build output
         run: ls -la build/libs/

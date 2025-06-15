@@ -39,6 +39,7 @@ application {
 jar {
     archiveBaseName = 'homeless-bot'
     archiveVersion = '1.0'
+    enabled = true
 
     manifest {
         attributes(
@@ -53,4 +54,12 @@ jar {
     }
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(Jar) {
+    manifest {
+        attributes(
+                'Main-Class': 'ru.mperminov.Main'
+        )
+    }
 }
