@@ -72,6 +72,7 @@ jobs:
             sudo mkdir -p ${{ env.APP_DIR }}/src/main/resources
             
             echo "Moving JAR file to final location..."
+            
             # Remove existing file/directory if it exists
             sudo rm -rf ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
             
