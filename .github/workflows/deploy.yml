@@ -21,7 +21,13 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build with Gradle
-        run: ./gradlew clean jar --info
+        run: |
+          ./gradlew clean jar --info
+          echo "Listing JAR contents:"
+          jar tf build/libs/*.jar
+          echo "Showing manifest:"
+          jar tf build/libs/*.jar | grep META-INF/MANIFEST.MF
+          unzip -p build/libs/*.jar META-INF/MANIFEST.MF
 
       - name: List build output
         run: ls -la build/libs/
@@ -48,7 +54,12 @@ jobs:
           path: ./artifact
 
       - name: List downloaded artifacts
-        run: ls -la ./artifact/
+        run: |
+          ls -la ./artifact/
+          echo "Checking JAR contents:"
+          jar tf ./artifact/*.jar
+          echo "Showing manifest:"
+          unzip -p ./artifact/*.jar META-INF/MANIFEST.MF
 
       - name: Copy JAR to VPS
         uses: appleboy/scp-action@master
@@ -106,6 +117,11 @@ jobs:
             echo "JAR file details:"
             ls -la ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
             file ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            
+            echo "Checking JAR contents on server:"
+            jar tf ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            echo "Showing manifest on server:"
+            unzip -p ${{ env.APP_DIR }}/${{ env.JAR_NAME }} META-INF/MANIFEST.MF
             
             echo "Creating environment files..."
             sudo mkdir -p ${{ env.APP_DIR }}/src
