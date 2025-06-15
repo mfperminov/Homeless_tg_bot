@@ -31,41 +31,37 @@ jobs:
     env:
       APP_DIR: "/opt/homeless-bot"
       SERVICE_NAME: "homeless-bot"
-      JAR_NAME: "app.jar" # The name for the JAR on the server
+      JAR_NAME: "app.jar"
 
     steps:
-      - name: Download JAR
+      - name: Download JAR artifact on runner
         uses: actions/download-artifact@v4
         with:
           name: homeless-bot-jar
-          path: /tmp/homelessbot
-      - name: Prepare SSH and deploy
+          path: ./artifact
+
+      - name: Copy JAR to VPS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          source: "./artifact/*.jar"
+          target: "${{ env.APP_DIR }}/$ { { env.JAR_NAME }}"  # Note: no spaces, make sure no stray spaces here
+
+      - name: Deploy and restart service on VPS
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           script: |
-            set -e # Exit immediately if a command exits with a non-zero status.
+            set -e
 
-            echo "Deploying application..."
-            echo "Creating application directory ${{ env.APP_DIR }} if it doesn't exist..."
+            echo "Creating application directory ${{ env.APP_DIR }}"
             sudo mkdir -p ${{ env.APP_DIR }}/src/main/resources
 
-            echo "Finding downloaded JAR..."
-            # Assuming only one JAR is in the artifact
-            DOWNLOADED_JAR_PATH=$(find /tmp/homelessbot -name '*.jar' -print -quit)
-            if [ -z "$DOWNLOADED_JAR_PATH" ]; then
-              echo "Error: No JAR file found in the downloaded artifact."
-              exit 1
-            fi
-            echo "Found JAR: $DOWNLOADED_JAR_PATH"
-
-            echo "Copying JAR to ${{ env.APP_DIR }}/${{ env.JAR_NAME }}"
-            sudo cp "$DOWNLOADED_JAR_PATH" "${{ env.APP_DIR }}/${{ env.JAR_NAME }}"
-
             echo "Creating app.env file..."
-            # Ensure src directory exists for app.env as per Java code
             sudo mkdir -p ${{ env.APP_DIR }}/src
             echo "tg.bot.token=${{ secrets.TG_BOT_TOKEN }}" | sudo tee ${{ env.APP_DIR }}/src/app.env > /dev/null
             echo "spreadsheet.id=${{ secrets.SPREADSHEET_ID }}" | sudo tee -a ${{ env.APP_DIR }}/src/app.env > /dev/null
@@ -81,7 +77,7 @@ jobs:
 
             [Service]
             User=${{ secrets.VPS_USER }}
-            Group=${{ secrets.VPS_USER }} # Assuming group is same as user, adjust if necessary
+            Group=${{ secrets.VPS_USER }}
             WorkingDirectory=${{ env.APP_DIR }}
             ExecStart=/usr/bin/java -jar ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
             SuccessExitStatus=143
@@ -102,4 +98,4 @@ jobs:
             sudo systemctl enable ${{ env.SERVICE_NAME }}.service
             sudo systemctl restart ${{ env.SERVICE_NAME }}.service
 
-            echo "Deployment complete. To check logs, use: journalctl -u ${{ env.SERVICE_NAME }} -f" 
+            echo "Deployment complete. Logs: journalctl -u ${{ env.SERVICE_NAME }} -f"
