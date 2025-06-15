@@ -39,13 +39,10 @@ application {
 jar {
     archiveBaseName = 'homeless-bot'
     archiveVersion = '1.0'
-    enabled = true
 
     manifest {
         attributes(
-                'Main-Class': 'ru.mperminov.Main',
-                'Implementation-Title': 'Homeless Bot',
-                'Implementation-Version': version
+                'Main-Class': application.mainClass.get()
         )
     }
 
@@ -54,12 +51,4 @@ jar {
     }
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-tasks.withType(Jar) {
-    manifest {
-        attributes(
-                'Main-Class': 'ru.mperminov.Main'
-        )
-    }
 }
