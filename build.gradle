@@ -32,3 +32,19 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+application {
+    mainClass = 'ru.mperminov.Main'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': application.mainClass.get()
+        )
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
