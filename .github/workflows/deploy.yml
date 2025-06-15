@@ -21,15 +21,11 @@ jobs:
 
       - name: Build with Gradle
         run: |
-          ./gradlew clean jar --info
+          ./gradlew clean shadowJar --info
           echo "Listing JAR contents:"
-          jar tf build/libs/*.jar
+          jar tf build/libs/*-all.jar
           echo "Showing manifest:"
-          unzip -p build/libs/*.jar META-INF/MANIFEST.MF
-          echo "Verifying JAR structure:"
-          ls -la build/libs/
-          echo "Checking if JAR is executable:"
-          java -jar build/libs/*.jar --version || true
+          unzip -p build/libs/*-all.jar META-INF/MANIFEST.MF
 
       - name: List build output
         run: ls -la build/libs/
@@ -38,7 +34,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: homeless-bot-jar
-          path: build/libs/*.jar
+          path: build/libs/*-all.jar
 
   deploy:
     needs: build

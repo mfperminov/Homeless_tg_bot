@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'application'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'ru.mperminov'
@@ -12,7 +13,6 @@ repositories {
 
 dependencies {
     // Telegram Bot API
-
     implementation 'org.telegram:telegrambots-longpolling:8.3.0'
     implementation 'org.telegram:telegrambots-client:8.3.0'
 
@@ -37,14 +37,6 @@ application {
     mainClass = 'ru.mperminov.Main'
 }
 
-jar {
-    manifest {
-        attributes(
-                'Main-Class': application.mainClass.get()
-        )
-    }
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
+// The shadow plugin will now handle the creation of the executable JAR.
+// It automatically uses the mainClass from the 'application' block.
+// It also handles merging dependencies correctly.
