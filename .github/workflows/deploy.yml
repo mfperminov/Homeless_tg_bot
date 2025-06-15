@@ -38,7 +38,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: homeless-bot-jar
-          path: /tmp/ # Download to a temporary directory
+          path: /tmp/homelessbot
       - name: Prepare SSH and deploy
         uses: appleboy/ssh-action@master
         with:
@@ -54,7 +54,7 @@ jobs:
 
             echo "Finding downloaded JAR..."
             # Assuming only one JAR is in the artifact
-            DOWNLOADED_JAR_PATH=$(find /tmp/ -name '*.jar' -print -quit)
+            DOWNLOADED_JAR_PATH=$(find /tmp/homelessbot -name '*.jar' -print -quit)
             if [ -z "$DOWNLOADED_JAR_PATH" ]; then
               echo "Error: No JAR file found in the downloaded artifact."
               exit 1
