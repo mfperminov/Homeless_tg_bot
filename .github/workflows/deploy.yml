@@ -45,8 +45,8 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          source: "./artifact/*.jar"
-          target: "${{ env.APP_DIR }}/${{ env.JAR_NAME }}"
+          source: "./artifact/homeless-bot-1.0-SNAPSHOT.jar"
+          target: "/opt/homeless-bot/app.jar"
 
       - name: Run deploy script on VPS
         uses: appleboy/ssh-action@master
