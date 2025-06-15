@@ -66,8 +66,9 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           source: "./artifact/*.jar"
-          target: "/tmp"
-          strip_components: 0
+          target: "/tmp/"
+          rename: "app.jar"
+          strip_components: 1
 
       - name: Run deploy script on VPS
         uses: appleboy/ssh-action@master
@@ -78,30 +79,22 @@ jobs:
           script: |
             set -e
             
+            JAR_FILE_TMP="/tmp/app.jar"
+            
+            echo "Verifying temporary JAR file..."
+            if [ ! -f "$JAR_FILE_TMP" ]; then
+              echo "Error: JAR file not found in /tmp after scp."
+              exit 1
+            fi
+            ls -la "$JAR_FILE_TMP"
+
             echo "Creating application directory..."
             sudo mkdir -p ${{ env.APP_DIR }}/src/main/resources
             
             echo "Moving JAR file to final location..."
-            # Find the JAR file in /tmp
-            JAR_FILE=$(find /tmp -name "*.jar" -type f -print -quit)
-            if [ -z "$JAR_FILE" ]; then
-              echo "Error: No JAR file found in /tmp"
-              exit 1
-            fi
+            sudo mv "$JAR_FILE_TMP" ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
             
-            echo "Found JAR file: $JAR_FILE"
-            
-            # Remove existing file/directory if it exists
-            sudo rm -rf ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
-            
-            # Copy the JAR file
-            sudo cp "$JAR_FILE" ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
-            
-            # Set proper permissions
-            sudo chown ${{ secrets.VPS_USER }}:${{ secrets.VPS_USER }} ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
-            sudo chmod 755 ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
-            
-            echo "Verifying JAR file..."
+            echo "Verifying final JAR file..."
             if [ ! -f "${{ env.APP_DIR }}/${{ env.JAR_NAME }}" ]; then
               echo "Error: JAR file does not exist at ${{ env.APP_DIR }}/${{ env.JAR_NAME }}"
               exit 1
