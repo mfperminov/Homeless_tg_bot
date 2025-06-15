@@ -59,16 +59,6 @@ jobs:
           source: "./artifact/*.jar"
           target: "/tmp/app.jar"
 
-      - name: Configure sudo access
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          script: |
-            echo "${{ secrets.VPS_USER }} ALL=(ALL) NOPASSWD: /usr/bin/mkdir, /usr/bin/mv, /usr/bin/chown, /usr/bin/chmod, /usr/bin/tee, /usr/bin/systemctl" | sudo tee /etc/sudoers.d/${{ secrets.VPS_USER }}
-            sudo chmod 440 /etc/sudoers.d/${{ secrets.VPS_USER }}
-
       - name: Run deploy script on VPS
         uses: appleboy/ssh-action@master
         with:
@@ -82,17 +72,30 @@ jobs:
             sudo mkdir -p ${{ env.APP_DIR }}/src/main/resources
             
             echo "Moving JAR file to final location..."
-            sudo mv /tmp/app.jar ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            # Remove existing file/directory if it exists
+            sudo rm -rf ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            
+            # Copy the JAR file
+            sudo cp /tmp/app.jar ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            
+            # Set proper permissions
             sudo chown ${{ secrets.VPS_USER }}:${{ secrets.VPS_USER }} ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
             sudo chmod 755 ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
             
             echo "Verifying JAR file..."
-            if ! java -jar ${{ env.APP_DIR }}/${{ env.JAR_NAME }} --version 2>/dev/null; then
-              echo "JAR file verification failed. Checking file details:"
-              ls -la ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
-              file ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            if [ ! -f "${{ env.APP_DIR }}/${{ env.JAR_NAME }}" ]; then
+              echo "Error: JAR file does not exist at ${{ env.APP_DIR }}/${{ env.JAR_NAME }}"
               exit 1
             fi
+            
+            if [ ! -s "${{ env.APP_DIR }}/${{ env.JAR_NAME }}" ]; then
+              echo "Error: JAR file is empty"
+              exit 1
+            fi
+            
+            echo "JAR file details:"
+            ls -la ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
+            file ${{ env.APP_DIR }}/${{ env.JAR_NAME }}
             
             echo "Creating environment files..."
             sudo mkdir -p ${{ env.APP_DIR }}/src
