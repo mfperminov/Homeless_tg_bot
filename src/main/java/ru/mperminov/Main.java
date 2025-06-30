@@ -29,8 +29,6 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -127,7 +125,7 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
     }
 
     private String quoteSheetName(String sheetName) {
-        return URLEncoder.encode(sheetName, StandardCharsets.UTF_16);
+        return "'" + sheetName.replace("'", "''") + "'";
     }
 
     @Override
