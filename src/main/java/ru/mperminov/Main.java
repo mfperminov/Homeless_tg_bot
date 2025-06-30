@@ -29,6 +29,8 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -124,9 +126,8 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
         }
     }
 
-    private String quoteSheetName(String sheetName) {
-        String encodedSheetName = sheetName.replace("+", "%2B");
-        return "'" + encodedSheetName.replace("'", "''") + "'";
+    private String encodeSheetName(String sheetName) {
+        return URLEncoder.encode(sheetName, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     @Override
@@ -263,7 +264,7 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
 
     private void fetchSheetData(long chatId, String sheetName, int rowCount) throws IOException, TelegramApiException {
         logger.info("Fetching sheet data for chatId {}, sheet: {}, rowCount: {}", chatId, sheetName, rowCount);
-        String range = quoteSheetName(sheetName);
+        String range = encodeSheetName(sheetName);
 
         ValueRange response = sheetsService.spreadsheets().values().get(this.spreadsheetId, range).execute();
         List<List<Object>> values = response.getValues();
@@ -619,7 +620,7 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
 
         ValueRange body = new ValueRange().setValues(List.of(newRow));
         sheetsService.spreadsheets().values()
-                .append(this.spreadsheetId, quoteSheetName(sheetName), body)
+                .append(this.spreadsheetId, encodeSheetName(sheetName), body)
                 .setValueInputOption("USER_ENTERED")
                 .setInsertDataOption("INSERT_ROWS")
                 .execute();
