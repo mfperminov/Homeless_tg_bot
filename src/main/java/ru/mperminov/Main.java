@@ -74,20 +74,18 @@ public class Main {
 class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
 
     private static final Logger logger = LoggerFactory.getLogger(HomelessGoogleSheetsBot.class);
-    private static final int DEFAULT_ROW_COUNT = 5; // Number of last rows to fetch
+    private static final int DEFAULT_ROW_COUNT = 1; // Number of last rows to fetch
     private static final String APPLICATION_NAME = "Telegram Bot Sheets";
     private static final String CREDENTIALS_FILE_PATH = "src/main/resources/credentials.json";
 
     public static Sheets getSheetsService() throws IOException, GeneralSecurityException {
-        ServiceAccountCredentials credentials = ServiceAccountCredentials
-                .fromStream(new FileInputStream(CREDENTIALS_FILE_PATH));
+        ServiceAccountCredentials credentials = ServiceAccountCredentials.fromStream(new FileInputStream(CREDENTIALS_FILE_PATH));
         logger.info("Google Sheets service credentials loaded from {}", CREDENTIALS_FILE_PATH);
         return new Sheets.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 GsonFactory.getDefaultInstance(),
                 new HttpCredentialsAdapter(credentials))
-                .setApplicationName(APPLICATION_NAME)
-                .build();
+                .setApplicationName(APPLICATION_NAME).build();
     }
 
     @NotNull
@@ -106,6 +104,7 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
         message.setReplyMarkup(keyboardMarkup);
         return message;
     }
+
     private final String botToken;
     private final String spreadsheetId;
     private final Map<Long, UserState> userStates = new HashMap<>();
@@ -440,7 +439,7 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
             EditMessageText editText = new EditMessageText("Добавление строки отменено. Выберите лист:");
             editText.setChatId(String.valueOf(chatId));
             editText.setMessageId(messageId);
-            editText.setReplyMarkup(null); 
+            editText.setReplyMarkup(null);
             execute(editText);
 
             // Clear edits and go back to sheet selection
@@ -585,7 +584,7 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
 
         // String columnName = String.valueOf(userState.getHeaderRowForEditing().get(columnIndex));
         // String diffText = String.format("Updated *%s* from `%s` to `%s`.", columnName, originalValue, newValue); // Diff text was removed as per flow
-        // sendMessage(chatId, diffText); 
+        // sendMessage(chatId, diffText);
 
         promptForColumnSelection(chatId, userState, lastBotMessageId, false);
     }
