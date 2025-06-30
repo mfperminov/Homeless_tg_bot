@@ -124,6 +124,10 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
         }
     }
 
+    private String quoteSheetName(String sheetName) {
+        return "'" + sheetName.replace("'", "''") + "'";
+    }
+
     @Override
     public void consume(final Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
@@ -258,7 +262,7 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
 
     private void fetchSheetData(long chatId, String sheetName, int rowCount) throws IOException, TelegramApiException {
         logger.info("Fetching sheet data for chatId {}, sheet: {}, rowCount: {}", chatId, sheetName, rowCount);
-        String range = sheetName;
+        String range = quoteSheetName(sheetName);
 
         ValueRange response = sheetsService.spreadsheets().values().get(this.spreadsheetId, range).execute();
         List<List<Object>> values = response.getValues();
@@ -614,7 +618,7 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
 
         ValueRange body = new ValueRange().setValues(List.of(newRow));
         sheetsService.spreadsheets().values()
-                .append(this.spreadsheetId, sheetName, body)
+                .append(this.spreadsheetId, quoteSheetName(sheetName), body)
                 .setValueInputOption("USER_ENTERED")
                 .setInsertDataOption("INSERT_ROWS")
                 .execute();
