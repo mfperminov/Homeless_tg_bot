@@ -125,7 +125,8 @@ class HomelessGoogleSheetsBot implements LongPollingSingleThreadUpdateConsumer {
     }
 
     private String quoteSheetName(String sheetName) {
-        return "'" + sheetName.replace("'", "''") + "'";
+        String encodedSheetName = sheetName.replace("+", "%2B");
+        return "'" + encodedSheetName.replace("'", "''") + "'";
     }
 
     @Override
